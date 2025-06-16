@@ -1,0 +1,63 @@
+# agent_registry.yaml
+
+# Configuration for the ADK Orchestrator
+# This file defines all the agents accessible by your multi-agent system.
+
+orchestrator:
+  name: live_agent_bridge
+  description: Routes the session to the right sub-agent based on context.
+  # The sub_agents list should include all agents that the orchestrator can dispatch to.
+  # The order might imply a default routing preference if not explicitly controlled by a policy agent.
+  sub_agents:
+    - diagnostics_agent
+    - troubleshooting_rag_agent
+    - booking_agent
+    - policy_agent # Policy agent will determine if escalation or further troubleshooting is needed
+    - log_agent # Log agent can be called by various other agents or the orchestrator directly
+    - status_agent # Status agent can summarize at various points or on demand
+
+agents:
+  # 1. Diagnostics Agent (C)
+  # Initially, this points to the Cloud Function stub as per the Comcast integration guide.
+  - name: diagnostics_agent
+    description: Performs automated network and device diagnostics, integrates with DownDetector.se and OSS.
+    endpoint: cloud_function://projects/hacker2025-team-212-dev/locations/us-central1/functions/run_diagnostics
+    # IMPORTANT: Project ID updated here.
+
+  # 2. Troubleshooting RAG Agent (D)
+  # This agent leverages Vertex AI Search for RAG and Google Search for document discovery.
+  - name: troubleshooting_rag_agent
+    description: Searches knowledge base and external sources for troubleshooting steps.
+    # For initial setup, this can point to a local Python file that wraps Vertex AI Search.
+    # Or directly to Vertex AI Search if the ADK framework supports it natively for RAG queries.
+    endpoint: local_python://agents/troubleshooting_rag_agent/troubleshooting_rag_agent.py
+    # This example assumes your troubleshooting_rag_agent.py will handle the Vertex AI Search integration.
+    # The actual Vertex AI Search index will be configured within that agent or via environment variables.
+
+  # 3. Booking Agent (H)
+  # Integrates with Google Calendar to book technician visits.
+  - name: booking_agent
+    description: Schedules technician visits or initiates firmware updates.
+    endpoint: local_python://agents/booking_agent/booking_agent.py
+    # If deployed as a separate microservice (e.g., Cloud Run), this would be:
+    # endpoint: https://your-booking-service-xyz.run.app/book
+
+  # 4. Policy Agent (F) - Reroute Agent
+  # Determines escalation conditions and triggers handoff to live agent (Teams).
+  - name: policy_agent
+    description: Determines escalation or retry conditions and orchestrates handoffs.
+    endpoint: local_python://policy/route_policy.py
+    # This points to the Python file you just created.
+
+  # 5. Log Agent (J)
+  # Collects and stores all session data in BigQuery and Cloud Storage.
+  - name: log_agent
+    description: Logs all conversational and diagnostic data for analytics and knowledge base.
+    endpoint: local_python://agents/log_agent/log_agent.py
+    # Configuration for BigQuery dataset and GCS bucket will be via environment variables.
+
+  # 6. Status Agent (New Agent)
+  # Summarizes the current session status or resolution state.
+  - name: status_agent
+    description: Summarizes the current session status and resolution state.
+    endpoint: local_python://agents/status_agent/status_agent.py

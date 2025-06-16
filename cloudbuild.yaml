@@ -1,0 +1,32 @@
+# cloudbuild.yaml
+
+steps:
+# Build the Docker image
+- name: 'gcr.io/cloud-builders/docker'
+  args: [
+    'build',
+    '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/adk-repo/adk-orchestrator:$COMMIT_SHA',
+    '.'
+  ]
+# Push the Docker image to Artifact Registry
+- name: 'gcr.io/cloud-builders/docker'
+  args: [
+    'push', 'us-central1-docker.pkg.dev/$PROJECT_ID/adk-repo/adk-orchestrator:$COMMIT_SHA'
+  ]
+# Deploy to Cloud Run
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args: [
+    'run', 'deploy', 'adk-orchestrator-service',
+    '--image', 'us-central1-docker.pkg.dev/$PROJECT_ID/adk-repo/adk-orchestrator:$COMMIT_SHA',
+    '--region', 'us-central1',
+    '--platform', 'managed',
+    '--allow-unauthenticated', # Adjust this for production (e.g., use Cloud IAM)
+    '--project', '$PROJECT_ID',
+    '--service-account', 'hacker2025-team-212-dev@appspot.gserviceaccount.com' # Your default App Engine service account
+    # You can add environment variables here if needed by your Cloud Run service
+    # For example, to pass LOG_BUCKET and LOG_DATASET
+    # '--set-env-vars', 'LOG_BUCKET=northern_lights_bucket,LOG_DATASET=cx_logs'
+  ]
+images:
+- 'us-central1-docker.pkg.dev/$PROJECT_ID/adk-repo/adk-orchestrator:$COMMIT_SHA'
